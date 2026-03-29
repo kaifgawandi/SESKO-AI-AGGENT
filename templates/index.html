@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SESKO AI | Intelligence Reimagined</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        :root { --bg-main: #f8fafd; --sidebar-bg: #f0f4f9; --text-primary: #1f1f1f; --text-secondary: #444746; --accent-blue: #0b57d0; --hover-bg: #e1e5e9; --input-bg: #ffffff; --sidebar-width: 280px; --bot-gradient: linear-gradient(45deg, #4285f4, #9b72cb, #d96570); }
+        body.dark-mode { --bg-main: #131314; --sidebar-bg: #1e1f20; --text-primary: #e3e3e3; --text-secondary: #c4c7c5; --accent-blue: #a8c7fa; --hover-bg: #333537; --input-bg: #1e1f20; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Google Sans', 'Segoe UI', Roboto, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-primary); height: 100vh; display: flex; transition: background 0.3s; overflow: hidden; }
+        
+        #sidebar { width: var(--sidebar-width); background: var(--sidebar-bg); display: flex; flex-direction: column; padding: 12px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        #sidebar.collapsed { width: 72px; }
+        #sidebar.collapsed .hide-on-collapse { display: none; }
+        .new-chat { background: var(--hover-bg); border: none; padding: 14px 18px; border-radius: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; color: var(--text-primary); font-weight: 500; margin-bottom: 20px; transition: 0.2s; }
+        
+        /* Menu Items */
+        .menu-item { position: relative; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; cursor: pointer; border-radius: 12px; color: var(--text-primary); font-size: 14px; margin-bottom: 4px; transition: 0.2s; }
+        .menu-item:hover { background: var(--hover-bg); }
+        .menu-item.pinned { border-left: 3px solid var(--accent-blue); background: rgba(11, 87, 208, 0.1); }
+        .chat-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
+        .options-btn { opacity: 0; transition: 0.2s; color: var(--text-secondary); padding: 4px; border-radius: 4px; }
+        .menu-item:hover .options-btn { opacity: 1; }
+        .options-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
+        
+        /* Dropdown */
+        .ctx-menu { display: none; position: absolute; right: 10px; top: 35px; background: var(--bg-main); border: 1px solid var(--hover-bg); box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 8px; z-index: 1000; width: 120px; overflow: hidden; }
+        .ctx-menu.show { display: block; }
+        .ctx-item { padding: 8px 12px; font-size: 13px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .ctx-item:hover { background: var(--hover-bg); }
+        .ctx-item.delete:hover { background: #ff4444; color: white; }
+
+        #main { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; }
+        .logo { font-size: 22px; font-weight: 600; background: var(--bot-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .user-profile { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+
+        #chat-window { flex-grow: 1; overflow-y: auto; padding: 20px 15%; display: flex; flex-direction: column; gap: 32px; scroll-behavior: smooth; }
+        .welcome-screen { text-align: center; margin-top: 10vh; }
+        .welcome-screen h1 { font-size: 56px; font-weight: 500; background: var(--bot-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .user-msg { align-self: flex-end; max-width: 80%; }
+        .user-msg span { background: var(--hover-bg); padding: 14px 24px; border-radius: 24px; display: block; font-size: 16px; line-height: 1.5; }
+        .bot-msg { display: flex; gap: 20px; animation: fadeIn 0.5s ease; }
+        .bot-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--bot-gradient); flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; }
+        
+        /* --- GEMINI-STYLE MARKDOWN (Professional & Clean) --- */
+        /* 1. Main Text Body */
+        .bot-text {
+            font-size: 16px;
+            line-height: 1.7;        /* Golden ratio for readability */
+            color: var(--text-primary);
+            font-family: 'Google Sans', 'Segoe UI', Roboto, sans-serif;
+            letter-spacing: 0.01em;
+        }
+        /* 2. Paragraph Spacing (No more walls of text) */
+        .bot-text p {
+            margin-bottom: 16px;     /* Space after every paragraph */
+            margin-top: 0;
+        }
+        /* 3. Headers (Blue & Bold like Gemini) */
+        .bot-text h1, .bot-text h2, .bot-text h3 {
+            color: var(--accent-blue);
+            font-weight: 600;
+            margin-top: 24px;        /* Space before a new section */
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+        .bot-text h3 {
+            font-size: 1.1em;
+            color: #d96570;          /* Soft red for sub-sections */
+        }
+        /* 4. Lists (Bullets & Numbers) */
+        .bot-text ul, .bot-text ol {
+            margin-left: 20px;
+            margin-bottom: 16px;
+            padding-left: 10px;
+        }
+        .bot-text li {
+            margin-bottom: 8px;      /* Space between list items */
+            padding-left: 5px;
+        }
+        .bot-text li::marker {
+            color: var(--accent-blue); /* Blue bullets */
+        }
+        /* 5. Code Blocks (The Dark Box) */
+        .bot-text pre {
+            background: #1e1e1e;
+            color: #e0e0e0;
+            padding: 16px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            margin: 16px 0;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        /* 6. Inline Code (Highlighter style) */
+        .bot-text code {
+            background: rgba(11, 87, 208, 0.1);
+            color: var(--accent-blue);
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        /* 7. Tables (Clean Grid) */
+        .bot-text table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95em;
+            border-radius: 8px;
+            overflow: hidden; /* Rounds the corners of the table */
+        }
+        .bot-text th {
+            background: var(--hover-bg);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.05em;
+        }
+        .bot-text th, .bot-text td {
+            padding: 12px 15px;
+            border: 1px solid var(--hover-bg);
+        }
+        /* 8. Bold Text (Key Terms) */
+        .bot-text strong {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+        .bot-text img { 
+            max-width: 100%; 
+            border-radius: 12px; 
+            margin-top: 10px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+        }
+
+        /* Dark Mode Specific Tweaks */
+        body.dark-mode .bot-text code {
+            background: rgba(255, 255, 255, 0.15); /* Lighter background for contrast */
+            color: #a8c7fa;                        /* Light Blue text */
+        }
+        body.dark-mode .bot-text strong {
+            color: #fff;                           /* Pure white for bold text */
+        }
+        body.dark-mode .bot-text h1, body.dark-mode .bot-text h2 {
+            color: #a8c7fa;                        /* Light Blue headers */
+        }
+
+        /* --- EXPORT TOOLBAR --- */
+        .msg-actions { display: flex; gap: 15px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--hover-bg); opacity: 0.8; }
+        .action-btn { cursor: pointer; font-size: 14px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .action-btn:hover { color: var(--accent-blue); }
+        .action-btn i { font-size: 16px; }
+
+        .tools-menu { display: none; position: absolute; bottom: 50px; left: 0; background: var(--sidebar-bg); border: 1px solid var(--hover-bg); border-radius: 12px; padding: 8px; width: 200px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 100; }
+        .tools-menu.show { display: block; }
+        .tool-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; color: var(--text-primary); cursor: pointer; border-radius: 8px; transition: 0.2s; }
+        .tool-item:hover { background: var(--hover-bg); }
+
+        .input-container { width: 100%; max-width: 850px; margin: 0 auto 24px; padding: 0 24px; }
+        .search-box { background: var(--input-bg); border-radius: 32px; padding: 8px 12px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--hover-bg); }
+        .search-box input { flex-grow: 1; border: none; background: transparent; padding: 12px 0; outline: none; color: var(--text-primary); font-size: 16px; }
+        .icon-btn { color: var(--text-secondary); cursor: pointer; padding: 10px; border-radius: 50%; transition: 0.2s; }
+        .icon-btn:hover { background: var(--hover-bg); color: var(--accent-blue); }
+
+        /* Thinking Animation */
+        .thinking-container { display: flex; align-items: center; gap: 12px; padding: 10px 15px; margin-top: 10px; color: var(--text-secondary); font-size: 14px; font-weight: 500; }
+        .thinking-logo { width: 24px; height: 24px; border-radius: 50%; animation: spin-pulse 2s infinite linear; box-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
+        @keyframes spin-pulse { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="dark-mode">
+
+    <div id="auth-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-main); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+        <div style="background: var(--sidebar-bg); padding: 40px; border-radius: 24px; width: 350px; text-align: center; border: 1px solid var(--hover-bg); box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+            <img src="sesko.jpg" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 20px; box-shadow: 0 0 20px rgba(255,215,0,0.2);">
+            <h2 id="auth-title" style="margin-bottom: 20px; color: var(--text-primary);">Welcome to SESKO</h2>
+            <input type="text" id="auth-user" placeholder="Username" style="width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--hover-bg); background: var(--input-bg); color: var(--text-primary);">
+            <input type="password" id="auth-pass" placeholder="Password" style="width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid var(--hover-bg); background: var(--input-bg); color: var(--text-primary);">
+            <button onclick="performAuth()" id="auth-btn" style="width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--accent-blue); color: white; font-weight: bold; cursor: pointer;">Login</button>
+            <p style="margin-top: 15px; font-size: 14px; color: var(--text-secondary); cursor: pointer;" onclick="toggleAuthMode()" id="auth-switch">New here? <span style="color: var(--accent-blue);">Create Account</span></p>
+            <p id="auth-error" style="color: red; font-size: 12px; margin-top: 10px; display: none;"></p>
+        </div>
+    </div>
+
+    <aside id="sidebar">
+        <div class="sidebar-btn icon-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')"><i class="fas fa-bars"></i></div>
+        <button class="new-chat" onclick="createNewChat()">
+            <i class="fas fa-plus"></i> <span class="hide-on-collapse">New chat</span>
+        </button>
+        <div style="flex-grow: 1; overflow-y: auto;" class="hide-on-collapse" id="sidebar-content"></div>
+        <div class="menu-item" onclick="document.body.classList.toggle('dark-mode')"><i class="fas fa-moon"></i> <span class="hide-on-collapse">Theme</span></div>
+        <div class="menu-item" onclick="performLogout()"><i class="fas fa-sign-out-alt"></i> <span class="hide-on-collapse">Logout</span></div>
+    </aside>
+
+    <main id="main">
+        <header>
+            <div class="logo-container"><div class="header-logo">S</div><div class="logo">SESKO</div></div>
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Kaif" class="user-profile">
+        </header>
+
+        <div id="chat-window">
+            <div class="welcome-screen" id="welcome">
+                <div class="welcome-logo">S</div>
+                <h1>Hello, User</h1>
+                <p>How can I assist your productivity today?</p>
+            </div>
+            <div id="messages"></div>
+        </div>
+
+        <div class="input-container">
+            <div id="preview-area" style="display:none; padding:10px;">
+                <img id="img-preview" style="height:60px; border-radius:8px;">
+                <span onclick="clearFile()" style="cursor:pointer; color:red; margin-left:10px;">x</span>
+            </div>
+            <div class="search-box">
+                <div class="tools-container" style="position:relative;">
+                    <div class="tools-menu" id="toolsMenu">
+                        <div class="tool-item" onclick="setMode('deep')"><i class="fas fa-globe-americas" style="color: #4285f4;"></i> Deep Research</div>
+                        <div class="tool-item" onclick="activateRinzMode()"><i class="fas fa-spa" style="color: #ff69b4;"></i> Rinz Mode</div>
+                        <div class="tool-item" onclick="setMode('search')"><i class="fas fa-search"></i> Quick Search</div>
+                        <div class="tool-item" onclick="setMode('chat')"><i class="fas fa-comment"></i> Normal Chat</div>
+                    </div>
+                    <button class="new-chat" onclick="document.getElementById('toolsMenu').classList.toggle('show')" style="margin-bottom:0; padding:10px 20px;"><i class="fas fa-layer-group"></i></button>
+                </div>
+                <i class="fas fa-paperclip icon-btn" onclick="document.getElementById('file-in').click()"></i>
+                <input type="file" id="file-in" style="display:none" onchange="handleFile()">
+                <input type="text" id="user-in" placeholder="Ask SESKO anything..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <i class="fas fa-microphone icon-btn" id="mic-btn" onclick="startDictation()"></i>
+                <i class="fas fa-paper-plane icon-btn" style="color: var(--accent-blue);" onclick="sendMessage()"></i>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentMode='chat', currentFile=null, currentSessionId=1, isLoginMode=true;
+        const msgContainer=document.getElementById('messages');
+
+        // --- AUTH LOGIC ---
+        window.onload = async function() {
+            const res = await fetch('/check_auth');
+            const data = await res.json();
+            if(data.logged_in) {
+                document.getElementById('auth-modal').style.display='none';
+                loadSidebar();
+            } else {
+                document.getElementById('auth-modal').style.display='flex';
+            }
+        };
+
+        async function performAuth() {
+            const u = document.getElementById('auth-user').value;
+            const p = document.getElementById('auth-pass').value;
+            const url = isLoginMode ? '/login' : '/register';
+            const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u, password:p})});
+            const data = await res.json();
+            if(data.success) {
+                if(!isLoginMode) { alert("Created! Please Login."); toggleAuthMode(); }
+                else { document.getElementById('auth-modal').style.display='none'; loadSidebar(); createNewChat(); }
+            } else {
+                const err=document.getElementById('auth-error'); err.innerText=data.error; err.style.display='block';
+            }
+        }
+
+        function toggleAuthMode() {
+            isLoginMode=!isLoginMode;
+            document.getElementById('auth-title').innerText = isLoginMode ? "Welcome" : "Create Account";
+            document.getElementById('auth-btn').innerText = isLoginMode ? "Login" : "Sign Up";
+            document.getElementById('auth-switch').innerHTML = isLoginMode ? "New? <span style='color:var(--accent-blue)'>Create</span>" : "Have account? <span style='color:var(--accent-blue)'>Login</span>";
+        }
+
+        async function performLogout() {
+            await fetch('/logout', {method:'POST'});
+            location.reload();
+        }
+
+        // --- CHAT LOGIC ---
+        async function loadSidebar() {
+            const res = await fetch('/get_sessions');
+            const sessions = await res.json();
+            const sb = document.getElementById('sidebar-content');
+            sb.innerHTML = "";
+            sessions.sort((a,b) => b.is_pinned - a.is_pinned || b.id - a.id);
+            sessions.forEach(s => {
+                sb.innerHTML += `
+                <div class="menu-item ${s.is_pinned?'pinned':''}">
+                    <div style="flex-grow:1; display:flex; align-items:center; gap:10px;" onclick="loadChat(${s.id})">
+                        <i class="far ${s.is_pinned?'fa-thumbtack':'fa-comment'}"></i> <span class="chat-title">${s.title}</span>
+                    </div>
+                    <div class="options-btn" onclick="toggleCtxMenu(event, ${s.id})"><i class="fas fa-ellipsis-v"></i></div>
+                    <div id="menu-${s.id}" class="ctx-menu">
+                        <div class="ctx-item" onclick="togglePin(${s.id})">Pin</div>
+                        <div class="ctx-item" onclick="renameChat(${s.id})">Rename</div>
+                        <div class="ctx-item delete" onclick="deleteChat(${s.id})">Delete</div>
+                    </div>
+                </div>`;
+            });
+        }
+
+        function toggleCtxMenu(e, id) { e.stopPropagation(); document.querySelectorAll('.ctx-menu').forEach(m=>m.classList.remove('show')); document.getElementById(`menu-${id}`).classList.toggle('show'); }
+        window.onclick = e => { if(!e.target.closest('.options-btn')) document.querySelectorAll('.ctx-menu').forEach(m=>m.classList.remove('show')); };
+
+        async function togglePin(id) { await fetch(`/toggle_pin/${id}`, {method:'POST'}); loadSidebar(); }
+        async function deleteChat(id) { if(confirm("Delete?")) { await fetch(`/delete_chat/${id}`, {method:'POST'}); loadSidebar(); } }
+        async function renameChat(id) { const t=prompt("Name:"); if(t) { await fetch(`/rename_chat/${id}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title:t})}); loadSidebar(); } }
+
+        async function createNewChat() {
+            const res = await fetch('/new_chat', {method:'POST'});
+            const data = await res.json();
+            currentSessionId = data.session_id;
+            msgContainer.innerHTML = "";
+            document.getElementById('welcome').style.display='flex';
+            loadSidebar();
+        }
+
+        async function loadChat(id) {
+            currentSessionId = id;
+            const res = await fetch(`/get_chat/${id}`);
+            const msgs = await res.json();
+            msgContainer.innerHTML = "";
+            document.getElementById('welcome').style.display='none';
+            msgs.forEach(m => { appendMessage('user', m.user_text); appendMessage('bot', m.bot_text); });
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-in');
+            const text = input.value.trim();
+            if(!text && !currentFile) return;
+            input.value = "";
+            appendMessage('user', text + (currentFile ? ` [File: ${currentFile.name}]` : ""));
+            
+            const tid = "think-"+Date.now();
+            msgContainer.insertAdjacentHTML('beforeend', `<div id="${tid}" class="thinking-container"><img src="sesko_logo.jpg" class="thinking-logo"> SESKO thinking...</div>`);
+            
+            const fd = new FormData();
+            fd.append('message', text); fd.append('mode', currentMode); fd.append('session_id', currentSessionId);
+            if(currentFile) { fd.append('file', currentFile); clearFile(); }
+
+            try {
+                const res = await fetch('/chat', {method:'POST', body:fd});
+                const data = await res.json();
+                document.getElementById(tid).remove();
+                appendMessage('bot', data.reply);
+                loadSidebar();
+            } catch (err) {
+                document.getElementById(tid).remove();
+                appendMessage('bot', "Error connecting to server.");
+            }
+        }
+
+        function appendMessage(sender, text) {
+            document.getElementById('welcome').style.display='none';
+            const msgDiv = document.createElement('div');
+            msgDiv.className = sender === 'user' ? 'user-msg' : 'bot-msg';
+            
+            // Unique ID for export tools
+            const msgId = "msg-" + Date.now() + Math.random().toString(16).slice(2);
+
+            if (sender === 'user') {
+                msgDiv.innerHTML = `<span>${text}</span>`;
+            } else {
+                // BOT MESSAGE WITH TOOLBAR
+                msgDiv.innerHTML = `
+                    <div class="bot-icon"><i class="fas fa-robot"></i></div>
+                    <div style="width: 100%;">
+                        <div class="bot-text" id="${msgId}">${text}</div>
+                        <div class="msg-actions">
+                            <div class="action-btn" onclick="copyToClipboard('${msgId}')" title="Copy Text"><i class="fas fa-copy"></i> Copy</div>
+                            <div class="action-btn" onclick="exportMarkdown('${msgId}')" title="Download Markdown"><i class="fab fa-markdown"></i> Markdown</div>
+                            <div class="action-btn" onclick="exportPDF('${msgId}')" title="Download PDF"><i class="fas fa-file-pdf"></i> PDF</div>
+                        </div>
+                    </div>
+                `;
+            }
+            msgContainer.appendChild(msgDiv);
+            document.getElementById('chat-window').scrollTo(0, document.getElementById('chat-window').scrollHeight);
+        }
+
+        function handleFile() {
+            const f = document.getElementById('file-in').files[0];
+            if(f) { currentFile=f; document.getElementById('preview-area').style.display='block'; document.getElementById('img-preview').src = URL.createObjectURL(f); }
+        }
+        function clearFile() { currentFile=null; document.getElementById('file-in').value=""; document.getElementById('preview-area').style.display='none'; }
+        
+        function setMode(mode) {
+            currentMode = mode;
+            const input = document.getElementById('user-in');
+            const icon = document.querySelector('.new-chat i');
+            document.getElementById('toolsMenu').classList.remove('show');
+
+            if(mode === 'deep') {
+                input.placeholder = "Deep Research: Enter complex topic...";
+                icon.className = "fas fa-brain"; icon.style.color = "#9b72cb";
+                appendMessage('bot', "🧠 **Deep Research Activated**\nI will analyze multiple sources. This may take 10-20 seconds.");
+            } else if(mode === 'search') {
+                input.placeholder = "Quick Search...";
+                icon.className = "fas fa-search"; icon.style.color = "#4285f4";
+                appendMessage('bot', "🔍 **Search Mode Activated**.");
+            } else {
+                input.placeholder = "Ask SESKO anything...";
+                icon.className = "fas fa-comment-alt"; icon.style.color = "inherit";
+                appendMessage('bot', "💬 **Normal Chat Mode**.");
+            }
+        }
+
+        function activateRinzMode() { setMode('image'); }
+        
+        function startDictation() {
+            const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if(R) { const r=new R(); r.onresult=e=>{document.getElementById('user-in').value=e.results[0][0].transcript}; r.start(); }
+            else alert("Use Chrome");
+        }
+
+        // --- EXPORT FUNCTIONS ---
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text).then(() => { alert("Copied to clipboard!"); });
+        }
+
+        function exportMarkdown(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            const blob = new Blob([text], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'SESKO_Report.md';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function exportPDF(elementId) {
+    const element = document.getElementById(elementId);
+    
+    // 1. Check if dark mode is currently on
+    const isDarkMode = document.body.classList.contains('dark-mode');
+
+    // 2. Temporarily turn OFF dark mode so text becomes dark
+    if (isDarkMode) {
+        document.body.classList.remove('dark-mode');
+    }
+
+    const opt = {
+        margin: 15,
+        filename: 'SESKO_Report.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // 3. Generate the PDF
+    html2pdf().set(opt).from(element).save().then(() => {
+        // 4. Turn dark mode back ON immediately after the PDF is saved
+        if (isDarkMode) {
+            document.body.classList.add('dark-mode');
+        }
+    });
+}
+    </script>
+</body>
+</html>
